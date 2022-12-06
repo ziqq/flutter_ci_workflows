@@ -19,4 +19,4 @@ jobs:
         run: flutter pub get
 
       - name: Run example app
-        run: flutter run example/lib/main.dart
+        run: dart run example/lib/main.dart
