@@ -45,7 +45,7 @@ jobs:
         run: flutter analyze --fatal-warnings --fatal-infos .
 
       - name: Run formatter
-        run: flutter format .
+        run: dart format .
 
       - name: Run package analyzer
         uses: axel-op/dart-package-analyzer@v3
