@@ -1,5 +1,10 @@
 name: "Analysis"
 
+## Caller of this workflow should use it as follows:
+## jobs:
+##  analysis:
+##    uses: ziqq/flutter_ci_workflows/.github/workflows/analysis.yml@main
+
 on: [ workflow_call ]
 
 jobs:
