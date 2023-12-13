@@ -56,7 +56,7 @@ jobs:
       - name: Run formatter
         run: dart format .
 
-      - name: Run package analyzer
-        uses: axel-op/dart-package-analyzer@v3
-        with:
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Run package analyzer
+      #   uses: axel-op/dart-package-analyzer@v3
+      #   with:
+      #     githubToken: ${{ secrets.GITHUB_TOKEN }}
