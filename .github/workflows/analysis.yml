@@ -56,6 +56,7 @@ jobs:
       - name: Run formatter
         run: dart format .
 
+      # TODO(ziqq): Monitor and uncomment this step
       # - name: Run package analyzer
       #   uses: axel-op/dart-package-analyzer@v3
       #   with:
