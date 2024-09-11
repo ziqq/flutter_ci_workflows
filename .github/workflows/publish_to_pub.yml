@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Repository
-        uses: actions/checkout@v2.3.5
+        uses: actions/checkout@v3
 
       - name: Set up Dart
         uses: dart-lang/setup-dart@v1.3
