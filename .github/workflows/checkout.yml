@@ -91,10 +91,10 @@ jobs:
       - name: 👷 Install dependencies
         run: flutter pub get
 
-      # - name: 🧪 Run dependency validator
-      #   run: |
-      #     dart pub global activate dependency_validator
-      #     dart pub global run dependency_validator:dependency_validator
+      - name: 🧪 Run dependency validator
+        run: |
+          dart pub global activate dependency_validator
+          dart pub global run dependency_validator:dependency_validator
 
       - name: 🔎 Check format
         id: check_format
