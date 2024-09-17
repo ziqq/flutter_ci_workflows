@@ -1,0 +1,20 @@
+## Caller of this workflow should use it as follows:
+
+name: "Report to codecov"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+      branches:
+        - main
+      tags-ignore:
+        - '**'
+
+jobs:
+ report:
+   uses: ziqq/flutter_ci_workflows/.github/workflows/codecov_report.yml@main
+   secrets:
+     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

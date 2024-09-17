@@ -1,0 +1,5 @@
+## Caller of this workflow should use it as follows:
+
+jobs:
+ checkout:
+   uses: ziqq/flutter_ci_workflows/.github/workflows/checkout.yml@main

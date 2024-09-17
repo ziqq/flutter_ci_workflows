@@ -1,5 +1,7 @@
 # Caller of this workflow should use it as follows:
 
+name: Publish to pub.dev
+
 on:
   workflow_dispatch:
   push:

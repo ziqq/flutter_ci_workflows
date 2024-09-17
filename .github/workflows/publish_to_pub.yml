@@ -19,14 +19,14 @@ on:
         required: true
 
 jobs:
-  check_versions:
+  check:
     runs-on: ubuntu-latest
     env:
       TAG: ''
       PUBSPEC_VERSION: ''
       CHANGELOG_VERSION: ''
     steps:
-      - name: Checkout
+      - name: 🚂 Checkout
         uses: actions/checkout@v3
 
       - name: 🎯 Get tag
@@ -97,7 +97,7 @@ jobs:
           echo "PUBSPEC: ${{ env.PUBSPEC_VERSION }}"
 
   pana:
-    needs: check_versions
+    needs: check
     runs-on: ubuntu-latest
     steps:
       - name: 👷 Set up Repository
@@ -131,14 +131,14 @@ jobs:
             exit 1
           fi
 
-  package-publishing:
-    needs: [ check_versions, pana ]
+  publishing:
+    needs: [ check, pana ]
     runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout'
+      - name: 🚂 Checkout
         uses: actions/checkout@v3
 
-      - name: '>> Flutter package <<'
+      - name: 💾 Publish flutter package
         uses: k-paxian/dart-package-publisher@master
         with:
           credentialJson: ${{ secrets.PUB_CREDENTIAL_JSON }}

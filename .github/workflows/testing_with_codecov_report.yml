@@ -1,7 +1,11 @@
-name: "Testing"
+name: "Testing with codecov report"
 
 
-on: [ workflow_call ]
+on:
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        required: true
 
 
 jobs:
@@ -69,4 +73,10 @@ jobs:
           key: ${{ runner.os }}-pub-${{ env.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
 
       - name: 🧪 Run tests
-        run: flutter test
+        timeout-minutes: 2
+        env:
+          CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+        if: success()
+        run: |
+          flutter test --coverage
+          bash <(curl -s https://codecov.io/bash) -f coverage/lcov.info
