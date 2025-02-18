@@ -145,4 +145,5 @@ jobs:
           accessToken: ${{ secrets.PUB_OAUTH_ACCESS_TOKEN }}
           refreshToken: ${{ secrets.PUB_OAUTH_REFRESH_TOKEN }}
           flutter: true
+          flutterBranch: 'stable'
           dryRunOnly: false
