@@ -27,7 +27,7 @@ jobs:
       CHANGELOG_VERSION: ''
     steps:
       - name: 🚂 Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@main
 
       - name: 🎯 Get tag
         id: get_tag
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 👷 Set up Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@main
 
       - name: 👷 Set up Dart
         uses: dart-lang/setup-dart@v1.3
