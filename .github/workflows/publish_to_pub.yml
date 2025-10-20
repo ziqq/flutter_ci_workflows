@@ -20,67 +20,68 @@ on:
 
 jobs:
   check:
+    name: "Check"
     runs-on: ubuntu-latest
     env:
       TAG: ''
       PUBSPEC_VERSION: ''
       CHANGELOG_VERSION: ''
     steps:
-      - name: 🚂 Checkout
+      - name: Checkout
         uses: actions/checkout@main
 
-      - name: 🎯 Get tag
+      - name: Get tag
         id: get_tag
         run: |
           TAG=$(git describe --tags --abbrev=0 --exact-match --match 'v*' HEAD | cut -c 2-)
           echo "TAG=$TAG" >> $GITHUB_ENV
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: ❔ Tag is empty
+      - name: Tag is empty
         if: ${{ steps.get_tag.outputs.tag == '' }}
         run: |
           echo "::error::Tag not found!"
           exit 1
 
-      - name: 💬 Echo tag
+      - name: Echo tag
         run: |
           echo "TAG: ${{ env.TAG }}"
 
-      - name: 🚂 Get pubspec version
+      - name: Get pubspec version
         id: get_pubspec_version
         run: |
           PUBSPEC_VERSION=$(grep '^version:' $PUBSPEC_PATH | cut -f2 -d":" | xargs)
           echo "PUBSPEC_VERSION=$PUBSPEC_VERSION" >> $GITHUB_ENV
           echo "pubspec_version=$PUBSPEC_VERSION" >> $GITHUB_OUTPUT
 
-      - name: 🔎 Pubspec version is empty
+      - name: Pubspec version is empty
         if: ${{ steps.get_pubspec_version.outputs.pubspec_version == '' }}
         run: |
           echo "::error::Pubspec version not found!"
           exit 1
 
-      - name: 🔎 Echo pubspec version
+      - name: Echo pubspec version
         run: |
           echo "Pubspec version: ${{ env.PUBSPEC_VERSION }}"
 
-      - name: 🚂 Get changelog version
+      - name: Get changelog version
         id: get_changelog_version
         run: |
           CHANGELOG_VERSION=$(grep -o '^## [^ ]*' $CHANGELOG_PATH | head -n1 | cut -c 4- | xargs)
           echo "CHANGELOG_VERSION=$CHANGELOG_VERSION" >> $GITHUB_ENV
           echo "changelog_version=$CHANGELOG_VERSION" >> $GITHUB_OUTPUT
 
-      - name: 🔎 Changelog version is empty
+      - name: Changelog version is empty
         if: ${{ steps.get_changelog_version.outputs.changelog_version == '' }}
         run: |
           echo "::error::Changelog version not found!"
           exit 1
 
-      - name: 💬 Echo changelog version
+      - name: Echo changelog version
         run: |
           echo "Changelog version: ${{ env.CHANGELOG_VERSION }}"
 
-      - name: ❌ Compare versions failed
+      - name: Compare versions failed
         if: ${{ steps.get_pubspec_version.outputs.pubspec_version != env.TAG || steps.get_changelog_version.outputs.changelog_version != env.TAG }}
         run: |
           echo "TAG: ${{ env.TAG }}"
@@ -89,7 +90,7 @@ jobs:
           echo "::error::The versions don't match!"
           exit 1
 
-      - name: ✅ Compare versions success
+      - name: Compare versions success
         run: |
           echo "Versions match:"
           echo "TAG: ${{ env.TAG }}"
@@ -97,29 +98,30 @@ jobs:
           echo "PUBSPEC: ${{ env.PUBSPEC_VERSION }}"
 
   pana:
+    name: "Pana"
     needs: check
     runs-on: ubuntu-latest
     steps:
-      - name: 👷 Set up Repository
+      - name: Set up Repository
         uses: actions/checkout@main
 
-      - name: 👷 Set up Dart
+      - name: Set up Dart
         uses: dart-lang/setup-dart@v1.3
 
-      - name: 👷 Install Flutter
-        uses: subosito/flutter-action@v1
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: "stable"
 
-      - name: 👷 Install dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: 👷 Install Pana
+      - name: Install Pana
         run: |
           dart pub get
           dart pub global activate pana
 
-      - name: 🔎 Verify pub score
+      - name: Verify pub score
         run: |
           PANA=$(pana . --no-warning)
           PANA_SCORE=$(echo "$PANA" | grep -o 'Points: [0-9]*/[0-9]*' | grep -o '[0-9]*/[0-9]*')
@@ -132,21 +134,22 @@ jobs:
           fi
 
   publishing:
+    name: "Publishing"
     needs: [ check, pana ]
     runs-on: ubuntu-latest
     steps:
-      - name: 🚂 Checkout
+      - name: Checkout
         uses: actions/checkout@main
 
-      - name: 👷 Install Flutter
+      - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: ✅ Check Flutter version
+      - name: Check Flutter version
         run: flutter --version
 
-      - name: 💾 Publish flutter package
+      - name: Publish flutter package
         uses: k-paxian/dart-package-publisher@master
         with:
           credentialJson: ${{ secrets.PUB_CREDENTIAL_JSON }}
