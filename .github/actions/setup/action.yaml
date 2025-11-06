@@ -1,0 +1,99 @@
+name: "Setup Flutter Environment"
+description: Sets up the Flutter environment for the project.
+
+inputs:
+  flutter-channel:
+    description: "The version of Flutter to use"
+    required: false
+    default: "stable"
+  flutter-version:
+    description: "The version of Flutter to use"
+    required: false
+  pub-cache:
+    description: "The name of the pub cache variable"
+    required: false
+    default: app
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout the repo
+      id: checkout-repo
+      uses: actions/checkout@v4
+
+    # - name: Verify versions # Add when will removed +build version from pubspec.yaml
+    #   id: versions
+    #   shell: bash
+    #   run: |
+    #     test -f pubspec.yaml && test -f CHANGELOG.md
+    #     version_pubspec=$(grep '^version:' pubspec.yaml | awk '{print $2}' | sed 's/[^[:print:]]//g')
+    #     echo "Version from pubspec.yaml: '$version_pubspec'"
+    #     echo "$version_pubspec" > /tmp/version_pubspec
+    #     grep -q "# $version_pubspec" CHANGELOG.md || (echo "Version not found in CHANGELOG.md" >&2; exit 1)
+    #     echo "VERSION=$version_pubspec" >> $GITHUB_ENV
+    #     echo "version=$version_pubspec" >> $GITHUB_OUTPUT
+
+    - name: Set up version from tags
+      id: set-version
+      if: startsWith(github.ref, 'refs/tags')
+      shell: bash
+      run: |
+        BASE_VERSION="${GITHUB_REF#refs/tags/v}"
+        UNIXTIME=$(date +%s)
+        VERSION="${BASE_VERSION}+${UNIXTIME}"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        sed -i "s/^version: .*/version: ${VERSION}/" pubspec.yaml
+        echo "Version set to $VERSION"
+
+    - name: Setup flutter
+      id: setup-flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: "${{ inputs.flutter-version }}"
+        channel: "${{ inputs.flutter-channel }}"
+
+    - name: Set pub cache path
+      id: set-pub-cache
+      shell: bash
+      run: echo "PUB_CACHE=$HOME/.pub-cache" >> $GITHUB_ENV
+
+    - name: Restore pub modules
+      id: restore-pub-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ${{ env.PUB_CACHE }}
+        key: ${{ runner.os }}-pub-${{ inputs.pub-cache }}-${{ hashFiles('pubspec.yaml') }}
+
+    - name: Install dependencies
+      id: install-dependencies
+      shell: bash
+      run: |
+        mkdir -p "$PUB_CACHE"
+
+        if [ -d /var/cache/pub ]; then
+          cp -r /var/cache/pub/. "$PUB_CACHE/"
+          ls -al "$PUB_CACHE"
+        fi
+
+        export PATH="$PATH:$PUB_CACHE/bin"
+        echo "$PUB_CACHE/bin" >> $GITHUB_PATH
+
+        dart --disable-analytics
+        flutter config --no-cli-animations --no-analytics
+        flutter pub get --no-example
+
+    - name: Run build runner
+      id: run-build-runner
+      shell: bash
+      run: |
+        dart run build_runner build --delete-conflicting-outputs --release
+
+    - name: Save pub modules
+      id: save-pub-cache
+      if: ${{ steps.cache-pub-restore.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ${{ env.PUB_CACHE }}
+        key: ${{ steps.cache-pub-restore.outputs.cache-primary-key }}
