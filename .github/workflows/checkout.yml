@@ -89,11 +89,6 @@ jobs:
         timeout-minutes: 1
         run: echo | grep -q Example README.md ; echo $?
 
-      - name: Check installation
-        id: check-installation
-        timeout-minutes: 1
-        run: echo | grep -q Installation README.md ; echo $?
-
       - name: Install dependencies
         id: install-dependencies
         timeout-minutes: 5
