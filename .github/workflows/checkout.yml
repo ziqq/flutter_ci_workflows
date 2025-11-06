@@ -17,17 +17,12 @@ jobs:
     #   threshold: 50
     timeout-minutes: 15
     steps:
-      - name: Get latest code
-        id: checkout
+      - name: Get the .github actions
         uses: actions/checkout@v4
+        id: checkout
+        timeout-minutes: 1
         with:
-          sparse-checkout: |
-            .github
-            lib
-            test
-            CHANGELOG.md
-            pubspec.yaml
-            analysis_options.yaml
+          submodules: recursive
 
       # - name: Install flutter
       #   uses: subosito/flutter-action@v2
