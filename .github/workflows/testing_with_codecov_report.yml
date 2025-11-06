@@ -6,10 +6,12 @@ on:
     secrets:
       CODECOV_TOKEN:
         required: true
+  workflow_run:
 
 
 jobs:
   testing:
+    name: "Testing with codecov report"
     runs-on: ubuntu-latest
     defaults:
       run:

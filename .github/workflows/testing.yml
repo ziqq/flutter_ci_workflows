@@ -3,10 +3,12 @@ name: "Testing"
 
 on:
   workflow_call:
+  workflow_run:
 
 
 jobs:
   testing:
+    name: "Testing"
     runs-on: ubuntu-latest
     defaults:
       run:

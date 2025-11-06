@@ -1,9 +1,12 @@
 name: "Run example app"
 
-on: [ workflow_call ]
+on:
+  workflow_call:
+  workflow_run:
 
 jobs:
   run_example_app:
+    name: "Run example app"
     runs-on: ubuntu-latest
 
     steps:

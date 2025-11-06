@@ -3,6 +3,7 @@ name: "Checkout"
 
 on:
   workflow_call:
+  workflow_run:
 
 
 jobs:
