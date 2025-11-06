@@ -12,62 +12,72 @@ jobs:
       run:
         working-directory: ./
     env:
-      pub-cache-name: pub
+      # pub-cache-name: pub
       threshold: 50
     timeout-minutes: 15
     steps:
-      - name: 🚂 Get latest code
+      - name: Get latest code
         id: checkout
         uses: actions/checkout@v4
         with:
+          # Configure sparse checkout to only fetch necessary files
           sparse-checkout: |
             .github
-            pubspec.yaml
             lib
             test
-            analysis_options.yaml
             CHANGELOG.md
+            pubspec.yaml
+            analysis_options.yaml
 
-      - name: 👷 Install flutter
-        uses: subosito/flutter-action@v2
-        id: install-flutter
-        with:
-          channel: 'stable'
+      # - name: Install flutter
+      #   uses: subosito/flutter-action@v2
+      #   id: install-flutter
+      #   with:
+      #     channel: 'stable'
+      - name: Setup dependencies
+        id: setup-dependencies
+        timeout-minutes: 5
+        uses: ./.github/actions/setup
+        # with:
+          # flutter-version: 3.35.3
+          # pub-cache: app
 
-      - name: 🔎 Check flutter version
+      - name: Check flutter version
         id: check-flutter-version
         run: flutter --version
-
-      - name: 📤 Restore Pub modules
-        id: cache-pub-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            $PWD/.pub_cache/
-          key: ${{ runner.os }}-pub-${{ env.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
-
-      - name: 🗄️ Export Pub cache directory
-        id: export-pub-cache
         timeout-minutes: 1
-        run: |
-          export PUB_CACHE=$PWD/.pub_cache/
-          export PATH="$PATH":"$HOME/.pub-cache/bin"
-          echo "${HOME}/.pub-cache/bin" >> $GITHUB_PATH
 
-      - name: 👷 Install Dependencies
-        id: install-dependencies
-        timeout-minutes: 2
-        run: |
-          apt-get update && apt-get install -y lcov
-          flutter pub get --no-example
+      # - name: Restore pub modules
+      #   id: cache-pub-restore
+      #   uses: actions/cache/restore@v4
+      #   with:
+      #     path: |
+      #       $PWD/.pub_cache/
+      #     key: ${{ runner.os }}-pub-${{ env.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
 
-      - name: 📥 Save Pub modules
-        id: cache-pub-save
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            $PWD/.pub_cache/
-          key: ${{ runner.os }}-pub-${{ env.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
+      # - name: Export pub cache directory
+      #   id: export-pub-cache
+      #   timeout-minutes: 1
+      #   run: |
+      #     export PUB_CACHE=$PWD/.pub_cache/
+      #     export PATH="$PATH":"$HOME/.pub-cache/bin"
+      #     echo "${HOME}/.pub-cache/bin" >> $GITHUB_PATH
 
-      - name: 🧪 Run tests
+      # - name: Install lcov
+      #   id: install-lcov
+      #   timeout-minutes: 2
+      #   run: |
+      #     apt-get update && apt-get install -y lcov
+      #     flutter pub get --no-example
+
+      # - name: Save pub modules
+      #   id: cache-pub-save
+      #   uses: actions/cache/save@v4
+      #   with:
+      #     path: |
+      #       $PWD/.pub_cache/
+      #     key: ${{ runner.os }}-pub-${{ env.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
+
+      - name: Run tests
+        timeout-minutes: 5
         run: flutter test

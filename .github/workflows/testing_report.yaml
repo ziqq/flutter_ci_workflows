@@ -1,0 +1,19 @@
+name: Test report
+
+on:
+  workflow_call:
+
+jobs:
+  report:
+    name: Test report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test report
+        id: test-report
+        uses: dorny/test-reporter@v1
+        with:
+          artifact: test-results
+          name: Test report
+          path: "**/tests.json"
+          reporter: flutter-json
+          fail-on-error: "false"

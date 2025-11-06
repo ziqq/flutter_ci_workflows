@@ -1,0 +1,546 @@
+name: Build io
+
+# Link: https://appstoreconnect.apple.com/access/integrations/api
+# IOS_API_AUTHKEY_P8 → APPLE_API_PRIVATE_KEY - Приватный ключ для API Apple, полученный из Apple Developer Console.
+# IOS_API_ISSUER_ID  → APPLE_ISSUER_ID       - Идентификатор эмитента API Apple, полученный из Apple Developer Console.
+# IOS_API_KEY_ID     → APPLE_API_KEY_ID      - Идентификатор ключа API Apple, полученный из Apple Developer Console.
+
+# Link: https://developer.apple.com/account/resources/profiles/list
+# IOS_KEYCHAIN_PASSWORD → APPLE_KEYCHAIN_PASSWORD              — случайный пароль для временного keychain в раннере.
+# IOS_CERTIFICATES_P12 → APPLE_CERTIFICATE_BASE64              — Base64-конвертированный .p12 файл сертификата.
+# IOS_CERTIFICATE_PASSWORD → APPLE_CERTIFICATE_BASE64_PASSWORD — Пароль .p12.
+
+# Link: https://console.cloud.google.com/welcome?hl=ru&inv=1&invt=Ab0ibA&project=beautybox-254710
+# GDRIVE_SERVICE_ACCOUNT_BASE64 - Base64-кодированный сервисный аккаунт Google Drive, который используется для загрузки сборок в Google Drive.
+# GDRIVE_FOLDER_ID              - ID папки Google Drive, куда будут загружаться сборки. Папка должна быть создана заранее и иметь соответствующие права доступа для сервисного аккаунта.
+
+# Likn: https://my.telegram.org
+# TELEGRAM_API_ID    — ID приложения.
+# TELEGRAM_API_HASH  — Hash того же приложения.
+# TELEGRAM_BOT_TOKEN — Токен бота, полученный у BotFather.
+# TELEGRAM_CHAT_ID   — ID чата или username, куда слать файл.
+
+# DISCORD_WEBHOOK — Webhook URL для отправки уведомлений о сборке в Discord канал.
+
+# YANDEX_S3_SECRET_ACCESS_KEY - Secret access key из API-ключа сервис-аккаунта
+# YANDEX_S3_ACCESS_KEY_ID     - Access key ID из API-ключа сервис-аккаунта
+# YANDEX_S3_BUCKET            - Название бакета
+# YANDEX_S3_REGION            - Регион бакета
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+  checks: write
+  id-token: write
+
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+#   cancel-in-progress: true
+
+jobs:
+  build_android:
+    # if: ${{ github.ref_name == 'main' || github.ref_name == 'development' }}
+    name: "Build Android"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./
+    timeout-minutes: 60
+    # concurrency:
+    #   group: build-prod-${{ github.workflow }}-${{ github.ref_name }}
+    #   cancel-in-progress: true
+
+    # Запустится только если:
+    # 1) Checkout завершился успешно
+    # 2) И ветка-источник — одна из списка
+    # if: >
+    #   github.event.workflow_run.conclusion == 'success' &&
+    #   github.event.workflow_run.head_branch == 'main'
+
+    env:
+      ENVIRONMENT:                 Prod
+      AAB_PATH:                    ''
+      APK_PATH:                    ''
+      VERSION_FULL:                ''
+      VERSION_BASE:                ''
+      VERSION_BUILD:               ''
+      YANDEX_S3_BUCKET:            ${{ secrets.YANDEX_S3_BUCKET }}
+      YANDEX_S3_REGION:            ${{ secrets.YANDEX_S3_REGION }}
+      YANDEX_S3_ACCESS_KEY_ID:     ${{ secrets.YANDEX_S3_ACCESS_KEY_ID }}
+      YANDEX_S3_SECRET_ACCESS_KEY: ${{ secrets.YANDEX_S3_SECRET_ACCESS_KEY }}
+    steps:
+      # If you have submodules that require SSH authentication, uncomment this step
+      # - name: Add ssh private keys for submodule repositories
+      #   id: add-ssh-keys
+      #   timeout-minutes: 1
+      #   uses: webfactory/ssh-agent@v0.7.0
+      #   with:
+      #       ssh-private-key: |
+      #         ${{ secrets.SSH_PRIVATE_KEY_SUBMODULE_APP_PACKAGES }}
+      #         ${{ secrets.SSH_PRIVATE_KEY_DART_TOOLS }}
+
+      - name: Get the .github actions
+        id: checkout-repo
+        timeout-minutes: 3
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Setup java
+        id: setup-java
+        timeout-minutes: 5
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup dependencies
+        id: setup-dependencies
+        timeout-minutes: 5
+        uses: ./.github/actions/setup
+        with:
+          # flutter-version: 3.32.2
+          pub-cache: app
+
+      - name: Decode Android keystore
+        id: decode-keystore
+        timeout-minutes: 1
+        run: |
+          mkdir -p android/app
+          echo -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" \
+            | base64 --decode > android/app/keystore.jks
+
+      - name: Generate key.properties
+        id: generate-key-properties
+        timeout-minutes: 1
+        run: |
+          cat > android/key.properties <<EOF
+          storeFile=keystore.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          EOF
+
+      - name: Build APK
+        id: build-apk
+        timeout-minutes: 40
+        run: |
+          flutter build apk --release --dart-define-from-file=config/production.json --flavor prod
+
+      - name: Build AAB
+        id: build-aab
+        timeout-minutes: 40
+        run: |
+          flutter build appbundle --release --dart-define-from-file=config/production.json --flavor prod
+
+      - name: Detect version and path
+        id: detect-version-and-path
+        timeout-minutes: 1
+        run: |
+          version_pubspec=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "VERSION_FULL=$version_pubspec" >> $GITHUB_ENV
+
+          apk=$(find build/app/outputs/flutter-apk -type f -name 'app-prod-release.apk' | head -n1)
+          if [ -z "$apk" ]; then
+            echo "❌ Release APK not found!"
+            exit 1
+          fi
+          echo "APK_PATH=$apk" >> $GITHUB_ENV
+
+          aab=$(find build/app/outputs/bundle/prodRelease -type f -name 'app-prod-release.aab' | head -n1)
+          if [ -z "$aab" ]; then
+            echo "❌ Release AAB not found!"
+            exit 1
+          fi
+          echo "AAB_PATH=$aab" >> $GITHUB_ENV
+
+      - name: Extract version variants
+        id: extract-versions-variants
+        timeout-minutes: 1
+        run: |
+          VERSION_BASE=${VERSION_FULL%%+*}
+          VERSION_BUILD=${VERSION_FULL#*+}
+
+          echo "VERSION_FULL=$VERSION_FULL" >> $GITHUB_ENV
+          echo "VERSION_BASE=$VERSION_BASE" >> $GITHUB_ENV
+          echo "VERSION_BUILD=$VERSION_BUILD" >> $GITHUB_ENV
+
+      - name: Normalize ENVIRONMENT
+        id: normalize-environment
+        timeout-minutes: 1
+        run: |
+            echo "ENV_LOWER=$(echo $ENVIRONMENT | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Upload APK and AAB
+        id: upload-artifact
+        timeout-minutes: 5
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: |
+            ${{ env.APK_PATH }}
+            ${{ env.AAB_PATH }}
+
+      - name: Debug APK and AAB size
+        id: debug-apk-aab-size
+        timeout-minutes: 1
+        run: |
+          ls -lh ${{ env.APK_PATH }}
+          ls -lh ${{ env.AAB_PATH }}
+
+      - name: Deploy to Google Play
+        id: deploy-google-play
+        timeout-minutes: 5
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.ANDROID_SERVICE_ACCOUNT_JSON }}
+          releaseFiles:                ${{ env.AAB_PATH }}
+          packageName:                 ru.beautybox.twa
+          status:                      completed
+          track:                       internal
+
+      - name: Install AWS CLI
+        id: install-aws-cli
+        timeout-minutes: 1
+        run: |
+          python3 -m pip install --user awscli
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Configure AWS CLI for Yandex S3
+        id: configure-aws-cli
+        timeout-minutes: 1
+        run: |
+          mkdir -p ~/.aws
+
+          cat > ~/.aws/config <<EOF
+          [default]
+          addressing_style = path
+          signature_version = s3v4
+          region = ${{ secrets.YANDEX_S3_REGION }}
+          endpoint_url = https://storage.yandexcloud.net
+          EOF
+
+          cat > ~/.aws/credentials <<EOF
+          [default]
+          aws_access_key_id = ${{ secrets.YANDEX_S3_ACCESS_KEY_ID }}
+          aws_secret_access_key = ${{ secrets.YANDEX_S3_SECRET_ACCESS_KEY }}
+          EOF
+
+      - name: Upload APK to Yandex S3
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.YANDEX_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YANDEX_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION:    ${{ secrets.YANDEX_S3_REGION }}
+        run: |
+          aws --endpoint-url https://storage.yandexcloud.net \
+              --region ${{ secrets.YANDEX_S3_REGION }} \
+              --profile default \
+              s3 cp "${{ env.APK_PATH }}" \
+                 "s3://${{ env.YANDEX_S3_BUCKET }}/${{ env.ENVIRONMENT }}/v${{ env.VERSION_BASE }}/app-${ENV_LOWER}-release.${{ env.VERSION_BUILD }}.apk" \
+              --acl public-read
+
+      - name: Set public download url
+        id: set-public-download-url
+        timeout-minutes: 1
+        run: |
+          DOWNLOAD_URL="https://storage.yandexcloud.net/${{ env.YANDEX_S3_BUCKET }}/${{ env.ENVIRONMENT }}/v${{ env.VERSION_BASE }}/app-${ENV_LOWER}-release.${{env.VERSION_BUILD}}.apk"
+          echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
+
+      - name: Notify in Discord
+        uses: appleboy/discord-action@v1.2.0
+        with:
+          webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
+          message: |
+            🚀 **New build #${{ github.run_number }}**
+            App: **App name**
+            Env: **Production**
+            Version: **${{ env.VERSION_BASE }}**
+            Build №: **${{ env.VERSION_BUILD }}**
+            Download: **[v${{ env.VERSION_FULL }}.apk](${{ steps.set-public-download-url.outputs.DOWNLOAD_URL }})**
+
+      - name: Notify in Telegram
+        # env:
+          # BOT_TOKEN:    ${{ secrets.TELEGRAM_TETRADKA_APP_APK_BOT_TOKEN }}
+          # CHAT_ID:      ${{ secrets.TELEGRAM_TETRADKA_APP_APK_CHAT_ID }}
+          # THREAD_ID:    ${{ secrets.TELEGRAM_TETRADKA_APP_APK_MESSAGE_THREAD_ID }}
+          # DOWNLOAD_URL: ${{ steps.set-public-download-url.outputs.DOWNLOAD_URL }}
+          # RUN_NUMBER:   ${{ github.run_number }}
+          # VERSION_BUILD: ${{ env.VERSION_BUILD }}
+          # VERSION_FULL: ${{ env.VERSION_FULL }}
+        run: |
+          mdv2_escape() {
+            sed -E 's/([][_*()~`\>#+=\-|{}.!\/])/\\\1/g' <<<"$1"
+          }
+
+          VBS=$(mdv2_escape "v${{ env.VERSION_BASE }}")
+          VB=$(mdv2_escape "v${{ env.VERSION_BUILD }}")
+          VF=$(mdv2_escape "v${{ env.VERSION_FULL }}.apk")
+
+          TEXT="🚀 *New build $(mdv2_escape "#${{ github.run_number }}")*
+          App: *App name*
+          Env: *Production*
+          Version: *${VBS}*
+          Build №: *${VB}**
+          Download: *[${VF}](${{ steps.set-public-download-url.outputs.DOWNLOAD_URL }})*
+
+          $(mdv2_escape "#appname") $(mdv2_escape "#production") $(mdv2_escape "#apk")"
+          PAYLOAD=$(jq -nc \
+            --arg chat_id "${{ secrets.TELEGRAM_TETRADKA_APP_APK_CHAT_ID }}" \
+            --arg thread_id "${{ secrets.TELEGRAM_TETRADKA_APP_APK_MESSAGE_THREAD_ID }}" \
+            --arg pm "MarkdownV2" \
+            --arg text "$TEXT" \
+            '{chat_id:( $chat_id|tonumber), message_thread_id:( $thread_id|tonumber), parse_mode:$pm, text:$text}')
+
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TETRADKA_APP_APK_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
+      - name: Compute artifact meta (size + sha256)
+        id: meta
+        if: success()
+        run: |
+          APK="${{ env.APK_PATH }}"
+          AAB="${{ env.AAB_PATH }}"
+
+          APK_SIZE=$(ls -lh "$APK" | awk '{print $5}')
+          AAB_SIZE=$(ls -lh "$AAB" | awk '{print $5}')
+
+          APK_SHA256=$(sha256sum "$APK" | cut -d ' ' -f1)
+          AAB_SHA256=$(sha256sum "$AAB" | cut -d ' ' -f1)
+
+          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
+          echo "aab_size=$AAB_SIZE" >> $GITHUB_OUTPUT
+          echo "apk_sha256=$APK_SHA256" >> $GITHUB_OUTPUT
+          echo "aab_sha256=$AAB_SHA256" >> $GITHUB_OUTPUT
+
+      - name: Generate release message
+        if: success()
+        continue-on-error: true
+        env:
+          APK_SIZE:    ${{ steps.meta.outputs.apk_size }}
+          AAB_SIZE:    ${{ steps.meta.outputs.aab_size }}
+          APK_SHA256:  ${{ steps.meta.outputs.apk_sha256 }}
+          AAB_SHA256:  ${{ steps.meta.outputs.aab_sha256 }}
+        run: |
+          chmod +x release-message.sh
+          DOWNLOAD_URL=${{ steps.set-public-download-url.outputs.DOWNLOAD_URL }} \
+          YANDEX_S3_BUCKET=${{ secrets.YANDEX_S3_BUCKET }} \
+          ENV_LOWER=$ENV_LOWER \
+            ./release-message.sh > release-message.md
+
+      - name: Create GitHub Release
+        id: create-release
+        if: success()
+        continue-on-error: true
+        uses: softprops/action-gh-release@v1
+        env:
+          # токен нужен для права создавать релиз и аплоадить артефакты
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: v${{ env.VERSION_FULL }}
+          body_path: release-message.md
+          files: |
+            ${{ env.APK_PATH }}
+            ${{ env.AAB_PATH }}
+          generate_release_notes: true
+          prerelease: ${{ contains(env.VERSION_FULL, 'pre') }}
+
+  build_ios:
+    # if: ${{ github.ref_name == 'main' || github.ref_name == 'development' }}
+    name: "Build IOS"
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: ./
+    timeout-minutes: 30
+    # concurrency:
+    #   group: build-prod-${{ github.workflow }}-${{ github.ref_name }}
+    #   cancel-in-progress: true
+
+    # Запустится только если:
+    # 1) Checkout завершился успешно
+    # 2) И ветка-источник — одна из списка
+    # if: >
+    #   github.event.workflow_run.conclusion == 'success' &&
+    #   github.event.workflow_run.head_branch == 'main'
+
+    steps:
+      # - name: Select Xcode 16
+      #   id: select-xcode
+      #   timeout-minutes: 1
+      #   run: sudo xcode-select -s /Applications/Xcode_16.1.app
+
+      - name: Setup Xcode
+        id: setup-xcode
+        timeout-minutes: 5
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.1'
+
+      - name: Check Xcode version
+        id: check-xcode-version
+        timeout-minutes: 1
+        run: /usr/bin/xcodebuild -version
+
+      - name: Ensure iOS platform SDK is installed
+        run: |
+          sudo xcodebuild -downloadPlatform iOS || true
+          sudo xcodebuild -runFirstLaunch || true
+          echo "== Available SDKs =="
+          xcodebuild -showsdks || true
+          echo "== Check iPhoneOS.platform SDK folder =="
+          ls -la /Applications/Xcode*/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs || true
+
+      - name: Add ssh private keys for submodule repositories
+        uses: webfactory/ssh-agent@v0.7.0
+        id: add-ssh-keys
+        timeout-minutes: 1
+        with:
+            ssh-private-key: |
+              ${{ secrets.SSH_PRIVATE_KEY_SUBMODULE_APP_PACKAGES }}
+              ${{ secrets.SSH_PRIVATE_KEY_DART_TOOLS }}
+
+      - name: Get the .github actions
+        id: get-actions
+        timeout-minutes: 1
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup dependencies
+        id: setup
+        timeout-minutes: 5
+        uses: ./.github/actions/setup
+        with:
+          # flutter-version: 3.32.2
+          pub-cache: app
+
+      # Use this step to copy correct GoogleService-Info.plist for Google Firebase with flavor
+      - name: Coppy GoogleService-Info.plist
+        id: copy-google-service-info
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          cp -r "ios/config/prod/GoogleService-Info.plist" "ios/GoogleService-Info.plist"
+
+      - name: Install pods
+        id: install-pods
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          cd ios
+          pod deintegrate
+          pod repo update
+          pod install
+          cd ..
+
+      - name: Import Apple Development Certificate
+        id: import-apple-development-certificate
+        timeout-minutes: 1
+        env:
+          IOS_KEYCHAIN_PASSWORD:    ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+          IOS_CERTIFICATES_P12:     ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_BASE64_PASSWORD }}
+        run: |
+          APPLE_DEVELOPMENT_CERTIFICATE=$RUNNER_TEMP/development_certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # import certificate from secrets
+          echo -n "$IOS_CERTIFICATES_P12" | base64 --decode --output $APPLE_DEVELOPMENT_CERTIFICATE
+
+          # create temporary keychain
+          security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$IOS_KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # import certificate to keychain
+          security import $APPLE_DEVELOPMENT_CERTIFICATE -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+      - name: Create App Store Connect API Private Key in `pwd`/private_keys
+        id: create-private-key
+        timeout-minutes: 1
+        env:
+          IOS_API_KEY_ID:     ${{ secrets.APPLE_API_KEY_ID }}
+          IOS_API_AUTHKEY_P8: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+        run: |
+          mkdir `pwd`/private_keys
+          echo -n "$IOS_API_AUTHKEY_P8" | base64 --decode --output `pwd`/private_keys/AuthKey_$IOS_API_KEY_ID.p8
+
+      - name: Build ipa
+        id: build-ipa
+        timeout-minutes: 10
+        run: |
+             flutter build ipa \
+              --dart-define-from-file=config/production.json \
+              --flavor prod \
+              --release \
+              --no-codesign \
+              --export-options-plist=ios/ExportOptions.plist
+
+      - name: Export by xcodebuild
+        id: export-by-xcodebuild
+        timeout-minutes: 5
+        env:
+          IOS_API_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          IOS_API_KEY_ID:    ${{ secrets.APPLE_API_KEY_ID }}
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyIssuerID $IOS_API_ISSUER_ID \
+            -authenticationKeyID $IOS_API_KEY_ID \
+            -authenticationKeyPath `pwd`/private_keys/AuthKey_$IOS_API_KEY_ID.p8
+
+      - name: Detect path for ipa file
+        id: detect-ipa-path
+        timeout-minutes: 1
+        run: |
+            ipa_path=$(find build/ios/ipa -type f -name '*.ipa' | head -n1)
+            if [ -z "$ipa_path" ]; then
+              echo "❌ IPA not found in build/ios/ipa"
+              exit 1
+            fi
+            echo "Found ipa: $ipa_path"
+            echo "IPA_PATH=$ipa_path" >> $GITHUB_ENV
+
+      - name: Upload to App Store Connect
+        id: upload-to-app-store
+        timeout-minutes: 5
+        env:
+          IOS_API_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          IOS_API_KEY_ID:    ${{ secrets.APPLE_API_KEY_ID }}
+        run: |
+          echo "Uploading $IPA_PATH to App Store Connect"
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            -f "$IPA_PATH" \
+            --apiKey "$IOS_API_KEY_ID" \
+            --apiIssuer "$IOS_API_ISSUER_ID"
+
+      - name: Clean up keychain and provisioning profile
+        id: cleanup-keychain
+        timeout-minutes: 1
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
