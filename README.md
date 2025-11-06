@@ -1,17 +1,17 @@
 # Workflows for Flutter in github actions
 
 
-## Description
+### Description
 Repository for storing shared workflow.
 
 
-## Docs
+### Docs
 [https://docs.github.com/en/actions/using-workflows/reusing-workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
 
 
-## Example
+### Example
 
-### Usage testing.yml
+#### Usage testing.yml
 ```yml
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} # Token is required
 ```
 
-### Usage checkout.yml
+#### Usage checkout.yml
 ```yml
 on:
   workflow_dispatch:
