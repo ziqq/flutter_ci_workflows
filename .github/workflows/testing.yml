@@ -3,7 +3,7 @@ name: "Testing"
 
 on:
   workflow_call:
-  workflow_run:
+  workflow_dispatch:
 
 
 jobs:

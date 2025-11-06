@@ -2,7 +2,7 @@ name: Test report
 
 on:
   workflow_call:
-  workflow_run:
+  workflow_dispatch:
 
 jobs:
   report:
