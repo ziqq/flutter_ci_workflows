@@ -8,6 +8,7 @@ on:
 
 jobs:
   checkout:
+    name: "Checkout"
     runs-on: ubuntu-latest
     defaults:
       run:

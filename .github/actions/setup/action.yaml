@@ -45,19 +45,19 @@ runs:
         sed -i "s/^version: .*/version: ${VERSION}/" pubspec.yaml
         echo "Version set to $VERSION"
 
-    - name: Setup flutter
+    - name: Setup Flutter
       id: setup-flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: "${{ inputs.flutter-version }}"
         channel: "${{ inputs.flutter-channel }}"
 
-    - name: Set pub cache path
+    - name: Set PUB_CACHE path
       id: set-pub-cache
       shell: bash
       run: echo "PUB_CACHE=$HOME/.pub-cache" >> $GITHUB_ENV
 
-    - name: Restore pub modules
+    - name: Restore Pub modules
       id: restore-pub-cache
       uses: actions/cache/restore@v4
       with:
@@ -65,7 +65,7 @@ runs:
           ${{ env.PUB_CACHE }}
         key: ${{ runner.os }}-pub-${{ inputs.pub-cache }}-${{ hashFiles('pubspec.yaml') }}
 
-    - name: Install dependencies
+    - name: Install Dependencies
       id: install-dependencies
       shell: bash
       run: |
@@ -89,7 +89,7 @@ runs:
       run: |
         dart run build_runner build --delete-conflicting-outputs --release
 
-    - name: Save pub modules
+    - name: Save Pub modules
       id: save-pub-cache
       if: ${{ steps.cache-pub-restore.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@v4
