@@ -37,6 +37,11 @@ jobs:
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
 
+      - name: Install lcov
+        id: install-lcov
+        timeout-minutes: 3
+        run: apt-get update && apt-get install -y lcov
+
       - name: Check flutter version
         id: check-flutter-version
         timeout-minutes: 1
@@ -93,11 +98,6 @@ jobs:
         id: install-dependencies
         timeout-minutes: 5
         run: flutter pub get --no-example
-
-      - name: Install lcov
-        id: install-lcov
-        timeout-minutes: 3
-        run: apt-get update && apt-get install -y lcov
 
       - name: Run dependency validator
         id: dependency-validator
