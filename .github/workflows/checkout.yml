@@ -6,6 +6,11 @@ on:
   workflow_dispatch:
 
 
+env:
+  FLUTTER_CHANNEL: stable
+  FLUTTER_VERSION: 3.35.3
+
+
 jobs:
   checkout:
     name: "Checkout"
@@ -13,9 +18,9 @@ jobs:
     defaults:
       run:
         working-directory: ./
-    # env:
-    #   pub-cache-name: pub
-    #   threshold: 50
+    env:
+      pub-cache-name: pub
+      threshold: 50
     timeout-minutes: 15
     steps:
       - name: Get the .github actions
@@ -25,86 +30,93 @@ jobs:
         with:
           submodules: recursive
 
-      # - name: Install flutter
-      #   uses: subosito/flutter-action@v2
-      #   id: install-flutter
-      #   with:
-      #     channel: 'stable'
-      - name: Setup dependencies
-        id: setup-dependencies
+      - name: Install flutter
+        uses: subosito/flutter-action@v2
+        id: install-flutter
         timeout-minutes: 5
-        uses: ./.github/actions/setup
-        # with:
-          # flutter-version: 3.35.3
-          # pub-cache: app
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
 
       - name: Check flutter version
         id: check-flutter-version
         timeout-minutes: 1
         run: flutter --version
 
-      # - name: Restore pub modules
-      #   id: cache-pub-restore
-      #   uses: actions/cache/restore@v4
-      #   with:
-      #     path: |
-      #       $PWD/.pub_cache/
-      #     key: ${{ runner.os }}-pub-${{ env.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
+      - name: Restore pub modules
+        id: cache-pub-restore
+        timeout-minutes: 3
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            $PWD/.pub_cache/
+          key: ${{ runner.os }}-pub-${{ env.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
 
-      # - name: Export pub cache directory
-      #   id: export-pub-cache
-      #   timeout-minutes: 1
-      #   run: |
-      #     export PUB_CACHE=$PWD/.pub_cache/
-      #     export PATH="$PATH":"$HOME/.pub-cache/bin"
-      #     echo "${HOME}/.pub-cache/bin" >> $GITHUB_PATH
-
-      - name: Install lcov
-        id: install-lcov
-        timeout-minutes: 2
+      - name: Export pub cache directory
+        id: export-pub-cache
+        timeout-minutes: 1
         run: |
-          apt-get update && apt-get install -y lcov
-        # flutter pub get --no-example
+          export PUB_CACHE=$PWD/.pub_cache/
+          export PATH="$PATH":"$HOME/.pub-cache/bin"
+          echo "${HOME}/.pub-cache/bin" >> $GITHUB_PATH
 
-      # - name: Save pub modules
-      #   id: cache-pub-save
-      #   uses: actions/cache/save@v4
-      #   with:
-      #     path: |
-      #       $PWD/.pub_cache/
-      #     key: ${{ runner.os }}-pub-${{ env.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
+      - name: Save pub modules
+        id: cache-pub-save
+        timeout-minutes: 3
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            $PWD/.pub_cache/
+          key: ${{ runner.os }}-pub-${{ env.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
 
       - name: Check content
-        id: check_files
+        id: check-files
+        timeout-minutes: 3
         uses: andstor/file-existence-action@v1
         with:
           files: "README.md, CHANGELOG.md, CONTRIBUTING.md, LICENSE, example"
 
       - name: File exists
-        if: steps.check_files.outputs.files_exists == 'true'
+        if: steps.check-files.outputs.files_exists == 'true'
         run: echo Content is ok!
 
       - name: Check description
+        id: check-description
+        timeout-minutes: 1
         run: echo | grep -q Description README.md ; echo $?
 
       - name: Check example
+        id: check-example
+        timeout-minutes: 1
         run: echo | grep -q Example README.md ; echo $?
 
       - name: Check installation
+        id: check-installation
+        timeout-minutes: 1
         run: echo | grep -q Installation README.md ; echo $?
 
       - name: Install dependencies
-        run: flutter pub get
+        id: install-dependencies
+        timeout-minutes: 5
+        run: flutter pub get --no-example
+
+      - name: Install lcov
+        id: install-lcov
+        timeout-minutes: 3
+        run: apt-get update && apt-get install -y lcov
 
       - name: Run dependency validator
+        id: dependency-validator
+        timeout-minutes: 3
         run: |
           dart pub global activate dependency_validator
           dart pub global run dependency_validator:dependency_validator
 
       - name: Check format
-        id: check_format
+        id: check-format
+        timeout-minutes: 3
         run: dart format --set-exit-if-changed -l 80 -o none lib/ test/
 
       - name: Check analyzer
-        id: check_analyzer
+        id: check-analyzer
+        timeout-minutes: 5
         run: dart analyze --fatal-infos --fatal-warnings lib/ test/

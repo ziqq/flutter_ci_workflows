@@ -91,9 +91,9 @@ runs:
 
     - name: Save Pub modules
       id: save-pub-cache
-      if: ${{ steps.cache-pub-restore.outputs.cache-hit != 'true' }}
+      if: ${{ steps.restore-pub-cache.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@v4
       with:
         path: |
           ${{ env.PUB_CACHE }}
-        key: ${{ steps.cache-pub-restore.outputs.cache-primary-key }}
+        key: ${{ steps.restore-pub-cache.outputs.cache-primary-key }}
