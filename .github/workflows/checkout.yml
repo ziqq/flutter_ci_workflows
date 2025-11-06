@@ -45,9 +45,13 @@ jobs:
           channel: ${{ env.FLUTTER_CHANNEL }}
 
       - name: Install lcov
+        if: runner.os == 'Linux'
         id: install-lcov
         timeout-minutes: 3
-        run: apt-get update && apt-get install -y lcov
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends lcov
+          lcov --version
 
       - name: Check flutter version
         id: check-flutter-version
@@ -67,9 +71,8 @@ jobs:
         id: export-pub-cache
         timeout-minutes: 1
         run: |
-          export PUB_CACHE=$PWD/.pub_cache/
-          export PATH="$PATH":"$HOME/.pub-cache/bin"
-          echo "${HOME}/.pub-cache/bin" >> $GITHUB_PATH
+          echo "PUB_CACHE=$PWD/.pub_cache/" >> "$GITHUB_ENV"
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
 
       - name: Save pub modules
         id: cache-pub-save
