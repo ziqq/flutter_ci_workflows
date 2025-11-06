@@ -16,6 +16,7 @@ permissions:
 env:
   FLUTTER_CHANNEL: stable
   FLUTTER_VERSION: 3.35.3
+  LINE_LENGTH: 80
 
 
 jobs:
@@ -119,7 +120,15 @@ jobs:
       - name: Check format
         id: check-format
         timeout-minutes: 3
-        run: dart format --set-exit-if-changed -l 80 -o none lib/ test/
+        run: |
+          find lib test \
+          -path '*/generated/*' -prune -o \
+          -type f -name '*.dart' \
+          ! -name '*.*.dart' \
+          ! -name 'messages_.*.dart' \
+          ! -name 'l10n.dart' \
+          -print0 |
+          xargs -0 dart format --set-exit-if-changed --line-length ${{ env.LINE_LENGTH }} -o none
 
       - name: Check analyzer
         id: check-analyzer
