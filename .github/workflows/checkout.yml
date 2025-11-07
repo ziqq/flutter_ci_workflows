@@ -34,12 +34,6 @@ permissions:
   id-token: write
 
 
-env:
-  FLUTTER_CHANNEL: ${{ inputs.flutter-channel }}
-  FLUTTER_VERSION: ${{ inputs.flutter-version }}
-  LINE_LENGTH: ${{ inputs.line-length }}
-
-
 jobs:
   checkout:
     name: "Checkout"
@@ -64,8 +58,8 @@ jobs:
         id: install-flutter
         timeout-minutes: 5
         with:
-          channel: ${{ env.FLUTTER_CHANNEL }}
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ inputs.flutter-channel }}
+          flutter-version: ${{ inputs.flutter-version }}
 
       - name: Install lcov
         if: runner.os == 'Linux'
@@ -150,7 +144,7 @@ jobs:
           ! -name 'messages_.*.dart' \
           ! -name 'l10n.dart' \
           -print0 |
-          xargs -0 dart format --set-exit-if-changed --line-length ${{ env.LINE_LENGTH }} -o none
+          xargs -0 dart format --set-exit-if-changed --line-length ${{ inputs.line-length }} -o none
 
       - name: Check analyzer
         id: check-analyzer
