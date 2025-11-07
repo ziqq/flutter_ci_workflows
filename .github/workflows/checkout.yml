@@ -25,6 +25,32 @@ on:
         required: false
         default: 50
   workflow_dispatch:
+    inputs:
+      flutter-channel:
+        type: string
+        required: false
+        default: 'stable'
+        description: 'The Flutter channel to use (stable, beta, dev, master)'
+      flutter-version:
+        type: string
+        required: false
+        default: '3.35.7'
+        description: 'The Flutter version to use (e.g., 3.35.7)'
+      line-length:
+        type: number
+        required: false
+        default: 80
+        description: 'The line length for dart format check'
+      pub-cache-name:
+        type: string
+        required: false
+        default: pub
+        description: 'The name of the pub cache variable'
+      threshold:
+        type: number
+        required: false
+        default: 50
+        description: 'The minimum coverage threshold percentage'
 
 
 permissions:
@@ -144,7 +170,7 @@ jobs:
           ! -name 'messages_.*.dart' \
           ! -name 'l10n.dart' \
           -print0 |
-          xargs -0 dart format --set-exit-if-changed --line-length ${{ inputs['line-length'] }} -o none
+          xargs -0 dart format --set-exit-if-changed --line-length ${{ inputs.line-length }} -o none
 
       - name: Check analyzer
         id: check-analyzer
