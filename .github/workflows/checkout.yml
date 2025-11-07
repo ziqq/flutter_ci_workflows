@@ -114,14 +114,6 @@ jobs:
           echo "PUB_CACHE=$PWD/.pub_cache/" >> "$GITHUB_ENV"
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
 
-      - name: Save pub modules
-        id: cache_pub_save
-        timeout-minutes: 3
-        uses: actions/cache/save@v4
-        with:
-          path: ./.pub_cache
-          key: ${{ runner.os }}-${{ inputs.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
-
       - name: Check content
         id: check_files
         run: |
@@ -158,6 +150,15 @@ jobs:
         id: install_dependencies
         timeout-minutes: 5
         run: flutter pub get --no-example
+
+      - name: Save pub modules
+        if: steps.cache_pub_restore.outputs.cache-hit != 'true'
+        id: cache_pub_save
+        timeout-minutes: 3
+        uses: actions/cache/save@v4
+        with:
+          path: ./.pub_cache
+          key: ${{ runner.os }}-${{ inputs.pub-cache-name }}-${{ hashFiles('**/pubspec.yaml') }}
 
       - name: Run dependency validator
         id: dependency_validator
