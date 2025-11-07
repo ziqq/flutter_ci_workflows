@@ -3,6 +3,27 @@ name: "Checkout"
 
 on:
   workflow_call:
+    inputs:
+      flutter-channel:
+        type: string
+        required: false
+        default: 'stable'
+      flutter-version:
+        type: string
+        required: false
+        default: '3.35.7'
+      line-length:
+        type: number
+        required: false
+        default: 80
+      pub-cache-name:
+        type: string
+        required: false
+        default: pub
+      threshold:
+        type: number
+        required: false
+        default: 50
   workflow_dispatch:
 
 
@@ -14,9 +35,9 @@ permissions:
 
 
 env:
-  FLUTTER_CHANNEL: stable
-  FLUTTER_VERSION: 3.35.3
-  LINE_LENGTH: 80
+  FLUTTER_CHANNEL: ${{ inputs.flutter-channel }}
+  FLUTTER_VERSION: ${{ inputs.flutter-version }}
+  LINE_LENGTH: ${{ inputs.line-length }}
 
 
 jobs:
@@ -27,8 +48,8 @@ jobs:
       run:
         working-directory: ./
     env:
-      pub-cache-name: pub
-      threshold: 50
+      pub-cache-name: ${{ inputs.pub-cache-name }}
+      threshold: ${{ inputs.threshold }}
     timeout-minutes: 15
     steps:
       - name: Get the .github actions
@@ -44,6 +65,7 @@ jobs:
         timeout-minutes: 5
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
 
       - name: Install lcov
         if: runner.os == 'Linux'

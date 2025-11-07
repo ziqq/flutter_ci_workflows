@@ -53,6 +53,12 @@ on:
 
 
 jobs:
- checkout:
-   uses: ziqq/flutter_ci_workflows/.github/workflows/checkout.yml@main
+  checkout:
+    uses: ziqq/flutter_ci_workflows/.github/workflows/checkout.yml@main
+    with:
+      flutter-channel: 'stable'
+      flutter-version: 3.35.3
+      pub-cache-name: 'pub'
+      line-length: 80
+      threshold: 60
 ```
