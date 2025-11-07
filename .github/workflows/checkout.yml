@@ -67,11 +67,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Check Flutter version
-        id: check_flutter_version
-        timeout-minutes: 1
-        run: flutter --version
-
       - name: Prepare pub cache
         id: prepare_pub_cache
         timeout-minutes: 1
@@ -97,6 +92,11 @@ jobs:
         with:
           channel: ${{ inputs.flutter-channel }}
           flutter-version: ${{ inputs.flutter-version }}
+
+      - name: Check Flutter version
+        id: check_flutter_version
+        timeout-minutes: 1
+        run: flutter --version
 
       - name: Install Lcov
         if: runner.os == 'Linux'
