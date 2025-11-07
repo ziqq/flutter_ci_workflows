@@ -144,7 +144,7 @@ jobs:
           ! -name 'messages_.*.dart' \
           ! -name 'l10n.dart' \
           -print0 |
-          xargs -0 dart format --set-exit-if-changed --line-length ${{ inputs.line-length }} -o none
+          xargs -0 dart format --set-exit-if-changed --line-length ${{ inputs['line-length'] }} -o none
 
       - name: Check analyzer
         id: check-analyzer
