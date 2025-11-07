@@ -76,7 +76,7 @@ jobs:
           echo "${{ github.workspace }}/.pub_cache/bin" >> "$GITHUB_PATH"
 
       - name: Restore pub modules
-        id: cache-pub_restore
+        id: cache_pub_restore
         timeout-minutes: 3
         uses: actions/cache/restore@v4
         with:
@@ -124,10 +124,21 @@ jobs:
 
       - name: Check content
         id: check_files
-        timeout-minutes: 3
-        uses: andstor/file-existence-action@v1
-        with:
-          files: "README.md, CHANGELOG.md, CONTRIBUTING.md, LICENSE, example"
+        run: |
+          missing=0
+          for f in README.md CHANGELOG.md CONTRIBUTING.md LICENSE example; do
+            if [ ! -e "$f" ]; then
+              echo "Missing: $f"
+              missing=1
+            fi
+          done
+          if [ $missing -eq 0 ]; then
+            echo "files_exists=true" >> "$GITHUB_OUTPUT"
+            echo "All files exist"
+          else
+            echo "files_exists=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
 
       - name: File exists
         if: steps.check_files.outputs.files_exists == 'true'
