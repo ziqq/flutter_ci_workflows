@@ -28,7 +28,7 @@ jobs:
       CHANGELOG_VERSION: ''
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Get tag
         id: get_tag
@@ -103,13 +103,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Repository
-        uses: actions/checkout@main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Dart
-        uses: dart-lang/setup-dart@v1.3
+        uses: dart-lang/setup-dart@6a218f2413a3e78e9087f638a238f6b40893203d # v1.3
 
       - name: Install Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: "stable"
 
@@ -139,10 +139,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: 'stable'
 
@@ -150,7 +150,7 @@ jobs:
         run: flutter --version
 
       - name: Publish flutter package
-        uses: k-paxian/dart-package-publisher@master
+        uses: k-paxian/dart-package-publisher@8fdba1dbf624c712706281a6f91cb50b6bfc2eaf # v.1.6.2
         with:
           credentialJson: ${{ secrets.PUB_CREDENTIAL_JSON }}
           accessToken: ${{ secrets.PUB_OAUTH_ACCESS_TOKEN }}
